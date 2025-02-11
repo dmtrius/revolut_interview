@@ -1,0 +1,12 @@
+package pl.dmt;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class TestMain {
+    @Test
+    void testMain() {
+        assertEquals(5, "hello".length());
+    }
+}
