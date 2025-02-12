@@ -18,6 +18,16 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 class LoadBalancerTest {
 
     @Test
+    void test_lb_register() {
+        LoadBalancer<Instance> lb = new LoadBalancer<>(1);
+        Instance instance = new ServiceInstance("addr1", "NAME_1");
+        assertDoesNotThrow(() -> lb.register(instance));
+        assertEquals(1, lb.getSize());
+        ServiceInstance toTest = (ServiceInstance) lb.getInstance();
+        assertEquals("addr1", toTest.getAddress());
+    }
+
+    @Test
     void test_lb_register_and_execute() {
         LoadBalancer<Instance> lb = new LoadBalancer<>(1);
         Instance instance = PowerMockito.spy(new ServiceInstance("addr1", "NAME_1"));
@@ -67,7 +77,7 @@ class LoadBalancerTest {
         Instance instance = new ServiceInstance("addr1");
         Instance instance2 = new ServiceInstance("addr2");
         Instance instance3 =
-                new ServiceInstance("addr3", "INSTANCE_3");
+                new ServiceInstance("addr3", "NAME_3");
         lb.register(instance);
         lb.register(instance2);
         lb.register(instance3);

@@ -16,6 +16,14 @@ public class ServiceInstance implements Instance {
         this.name = name;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public String getName() {
+        return name;
+    }
+
     @Override
     public String execute() {
         return "Executing instance: " + this;
