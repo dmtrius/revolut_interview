@@ -6,26 +6,29 @@ import java.util.Random;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class LoadBalancer {
+public class LoadBalancer<T> {
     private final Lock lock = new ReentrantLock();
     private final Random rand = new Random();
     private final int maxInstances;
-    private final List<Instance> storage;
+    private final List<T> storage;
 
     public LoadBalancer(int maxInstances) {
         this.maxInstances = maxInstances;
         storage = new ArrayList<>(maxInstances);
     }
 
-    public Instance getInstance() {
-        int index = rand.nextInt(storage.size());
+    public T getInstance() {
+        if (getSize() == 0) {
+            throw new LoadBalancerException("No instances registered");
+        }
+        int index = rand.nextInt(getSize());
         return storage.get(index);
     }
 
-    public void register(Instance instance) {
+    public void register(T instance) {
         try {
             lock.lock();
-            if (storage.size() < maxInstances) {
+            if (getSize() < maxInstances) {
                 if (!storage.contains(instance)) {
                     storage.add(instance);
                 } else {
@@ -39,7 +42,24 @@ public class LoadBalancer {
         }
     }
 
-    public int getSize() {
+    public void unregister(T instance) {
+        try {
+            lock.lock();
+            if (!storage.isEmpty()) {
+                if (storage.contains(instance)) {
+                    storage.remove(instance);
+                } else {
+                    throw new LoadBalancerException("INSTANCE not registered");
+                }
+            } else {
+                throw new LoadBalancerException("EMPTY");
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public synchronized int getSize() {
         return storage.size();
     }
 }

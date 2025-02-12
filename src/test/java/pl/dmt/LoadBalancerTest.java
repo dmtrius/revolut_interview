@@ -1,57 +1,82 @@
 package pl.dmt;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PrepareForTest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Random;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
+
+@ExtendWith(MockitoExtension.class)
+@PrepareForTest(LoadBalancer.class)
 class LoadBalancerTest {
 
-    @Test()
-    void test_lb_register() {
-        LoadBalancer lb = new LoadBalancer(1);
-        Instance instance = new Instance("addr1");
-        Assertions.assertDoesNotThrow(() -> lb.register(instance));
+    @Test
+    void test_lb_register_and_execute() {
+        LoadBalancer<Instance> lb = new LoadBalancer<>(1);
+        Instance instance = PowerMockito.spy(new ServiceInstance("addr1", "NAME_1"));
+        assertDoesNotThrow(() -> lb.register(instance));
         assertEquals(1, lb.getSize());
-    }
-
-    @Test()
-    void test_lb_register_twice_throw_exception() {
-        LoadBalancer lb = new LoadBalancer(2);
-        Instance instance = new Instance("addr1");
-        Instance instance2 = new Instance("addr1");
-        Assertions.assertDoesNotThrow(() -> lb.register(instance));
-        Assertions.assertThrows(RuntimeException.class ,() -> lb.register(instance2));
-    }
-
-    @Test()
-    void test_lb_register_max_throw_exception() {
-        LoadBalancer lb = new LoadBalancer(1);
-        Instance instance = new Instance("addr1");
-        Instance instance2 = new Instance("addr2");
-        Assertions.assertDoesNotThrow(() -> lb.register(instance));
-        Assertions.assertThrows(RuntimeException.class ,() -> lb.register(instance2));
+        assertDoesNotThrow(instance::execute);
+        assertEquals("Executing instance: ServiceInstance[address='addr1', name='NAME_1']",
+                instance.execute());
+        Mockito.verify(instance, times(2)).execute();
     }
 
     @Test
-    void test_lb_get_random_instance() {
-        LoadBalancer lb = new LoadBalancer(3);
-        Instance instance = new Instance("addr1");
-        Instance instance2 = new Instance("addr2");
-        Instance instance3 = new Instance("addr3");
-        instance3.setName("INSTANCE_3");
+    void test_lb_register_unregister() {
+        LoadBalancer<Instance> lb = new LoadBalancer<>(1);
+        Instance instance = new ServiceInstance("addr1");
+        assertDoesNotThrow(() -> lb.register(instance));
+        assertEquals(1, lb.getSize());
+        assertDoesNotThrow(() -> lb.unregister(instance));
+        assertEquals(0, lb.getSize());
+    }
+
+    @Test
+    void test_lb_register_twice_throw_exception() {
+        LoadBalancer<Instance> lb = new LoadBalancer<>(2);
+        Instance instance = new ServiceInstance("addr1");
+        Instance instance2 = new ServiceInstance("addr1");
+        assertDoesNotThrow(() -> lb.register(instance));
+        assertThrows(LoadBalancerException.class,
+                () -> lb.register(instance2));
+    }
+
+    @Test
+    void test_lb_register_max_throw_exception() {
+        LoadBalancer<Instance> lb = new LoadBalancer<>(1);
+        Instance instance = new ServiceInstance("addr1");
+        Instance instance2 = new ServiceInstance("addr2");
+        assertDoesNotThrow(() -> lb.register(instance));
+        assertThrows(LoadBalancerException.class,
+                () -> lb.register(instance2));
+    }
+
+    @Test
+    void test_lb_get_random_instance() throws IllegalAccessException {
+        Random rand = PowerMockito.mock(Random.class);
+        LoadBalancer<Instance> lb = PowerMockito.spy(new LoadBalancer<>(3));
+        PowerMockito.field(LoadBalancer.class, "rand").set(lb, rand);
+        Instance instance = new ServiceInstance("addr1");
+        Instance instance2 = new ServiceInstance("addr2");
+        Instance instance3 =
+                new ServiceInstance("addr3", "INSTANCE_3");
         lb.register(instance);
         lb.register(instance2);
         lb.register(instance3);
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
-        System.out.println(lb.getInstance());
+        int counter = 9;
+        for (int i = 0; i < counter; i++) {
+            lb.getInstance();
+        }
         assertEquals(3, lb.getSize());
+        Mockito.verify(rand, times(counter))
+                .nextInt(anyInt());
     }
 }
